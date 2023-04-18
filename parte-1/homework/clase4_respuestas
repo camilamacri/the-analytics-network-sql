@@ -1,0 +1,60 @@
+-- SQL Server
+-- Clase 4
+
+-- 1
+select * into bkp_curso_product_master
+from curso_product_master
+
+-- 2
+update bkp_curso_product_master 
+set color = 'N/A'
+where color is null
+
+update bkp_curso_product_master
+set material = 'N/A'
+where material is null
+
+-- 3
+update bkp_curso_product_master
+set is_active = 'FALSE'
+where subsubcategoria = 'Control remoto' and is_active = 'TRUE'
+
+-- 4
+alter table bkp_curso_product_master add is_local varchar(5)
+
+update bkp_curso_product_master
+set is_local = case when origen = 'Argentina' then 'TRUE' else 'FALSE' end
+
+-- 5
+alter table curso_order_line_sale add line_key varchar(20)
+
+update curso_order_line_sale
+set line_key = concat(orden, producto)
+
+-- 6
+delete from curso_order_line_sale where pos = 1
+
+-- 7
+create table employees (    
+						id int identity(1,1),
+						nombre varchar(40),
+						apellido varchar(40),
+						fecha_entrada datetime,
+						fecha_salida datetime,
+						telefono varchar(40),
+						pais text,
+						provincia text,
+						codigo_tienda varchar (255),
+						posicion varchar (255)
+);
+
+-- 8
+insert into employees (nombre, apellido, fecha_entrada, fecha_salida, telefono, pais, provincia, codigo_tienda, posicion)
+values ('Juan', 'Perez', '2022-01-01', null, '+541113869867', 'Argentina', 'Santa Fe', '2', 'Vendedor'),
+('Catalina', 'Garcia', '2022-03-01', null, null, 'Argentina', 'Buenos Aires', '2', 'Representante Comercial'),
+('Ana', 'Valdez', '2020-02-21', '2022-03-01', null, 'España', 'Madrid', '8', 'Jefe Logistica'),
+('Fernando', 'Moralez', '2022-04-04', null, null, 'España', 'Valencia', '9', 'Vendedor');
+
+-- 9
+select *, getdate() as last_updated_ts into bkp_curso_cost
+from curso_cost
