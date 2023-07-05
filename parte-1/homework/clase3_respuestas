@@ -1,0 +1,83 @@
+-- SQL Server
+-- Clase 3
+
+-- 1
+select nombre, codigo_producto, categoria, case when color is null then 'Unknown' else color end as color
+from curso_product_master
+where (nombre like '%PHILIPS%' or nombre like '%SAMSUNG%' or nombre like '%Samsung%')
+
+-- 2
+select tienda, sum(venta) as ventas_brutas, sum(impuestos) as impuestos_pagados, moneda, pais, provincia
+from curso_order_line_sale
+left join curso_store_master on curso_order_line_sale.tienda = curso_store_master.codigo_tienda
+group by tienda, moneda, pais, provincia
+
+-- 3
+select sum(venta) as ventas_totales, subcategoria, moneda
+from curso_order_line_sale
+left join curso_product_master on curso_order_line_sale.producto = curso_product_master.codigo_producto
+group by subcategoria, moneda
+order by subcategoria, moneda
+
+-- 4
+select sum(cantidad) unidades_vendidas, subcategoria, CONCAT(pais,'-',provincia) as pais_provincia
+from curso_order_line_sale
+left join curso_product_master on curso_order_line_sale.producto = curso_product_master.codigo_producto
+left join curso_store_master on curso_order_line_sale.tienda = curso_store_master.codigo_tienda
+group by subcategoria, pais, provincia
+order by pais_provincia
+
+-- 5
+select nombre as nombre_tienda, sum(conteo) as cantidad_entradas
+from curso_super_store_count
+left join curso_store_master on curso_super_store_count.tienda = curso_store_master.codigo_tienda
+group by nombre
+
+-- 6
+select codigo_producto, tienda, curso_store_master.nombre as nombre_tienda, avg((inicial+final)/2) as inventario_promedio, format(fecha, 'MM') as mes
+from curso_inventory
+left join curso_store_master on curso_inventory.tienda = curso_store_master.codigo_tienda
+left join curso_product_master on curso_inventory.sku = curso_product_master.codigo_producto
+group by codigo_producto, tienda, curso_store_master.nombre, format(fecha, 'MM') 
+
+-- 7
+select grupo_material, sum(cantidad) as cantidad
+from
+	(select case when material is null then 'Unknown' 
+	  when lower(material) = 'plastico' then 'Plastico' else material end as grupo_material, cantidad
+	  from curso_order_line_sale
+	  left join curso_product_master on curso_order_line_sale.producto = curso_product_master.codigo_producto
+	 )a
+group by grupo_material
+
+-- 8
+select ols.*, case when moneda = 'ARS' then (coalesce(venta,0) + coalesce(descuento,0) + coalesce(creditos,0))/cotizacion_usd_peso 
+when moneda = 'URU' then (coalesce(venta,0) + coalesce(descuento,0) + coalesce(creditos,0))/cotizacion_usd_uru
+when moneda = 'EUR' then (coalesce(venta,0) + coalesce(descuento,0) + coalesce(creditos,0))/cotizacion_usd_eur end as venta_bruta_usd
+from curso_order_line_sale as ols
+left join curso_monthly_average_fx_rate on datepart(MONTH,ols.fecha) = datepart(month,curso_monthly_average_fx_rate.mes)
+
+-- 9
+with moneda as (
+select case when moneda = 'ARS' then venta / cotizacion_usd_peso 
+when moneda = 'URU' then venta / cotizacion_usd_uru
+when moneda = 'EUR' then venta / cotizacion_usd_eur end as ventas
+from curso_order_line_sale as ols
+left join curso_monthly_average_fx_rate on datepart(MONTH,ols.fecha) = datepart(month,curso_monthly_average_fx_rate.mes)
+)
+select sum(ventas) as ventas_totales_usd
+from moneda
+
+-- 10
+select ols.*, case when moneda = 'ARS' then ((coalesce(venta,0) + coalesce(descuento,0)) / cotizacion_usd_peso) - coalesce(costo_promedio_usd,0)
+when moneda = 'URU' then ((coalesce(venta,0) + coalesce(descuento,0)) / cotizacion_usd_uru) - coalesce(costo_promedio_usd,0)
+when moneda = 'EUR' then ((coalesce(venta,0) + coalesce(descuento,0)) / cotizacion_usd_eur) - coalesce(costo_promedio_usd,0) end as margen_venta_usd
+from curso_order_line_sale as ols
+left join curso_monthly_average_fx_rate on datepart(MONTH,ols.fecha) = datepart(month,curso_monthly_average_fx_rate.mes)
+left join curso_cost on ols.producto = curso_cost.codigo_producto
+
+-- 11
+select sum(cantidad) cantidad_items, subcategoria, orden
+from curso_order_line_sale
+left join curso_product_master on curso_order_line_sale.producto = curso_product_master.codigo_producto
+group by subcategoria, orden
