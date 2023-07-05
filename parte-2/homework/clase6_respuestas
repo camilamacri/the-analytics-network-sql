@@ -1,0 +1,145 @@
+-- SQL Server
+-- Clase 6
+
+-- 1- Crear una vista con el resultado del ejercicio de la Parte 1 - Clase 2 - Ejercicio 10, donde unimos la cantidad de gente que ingresa
+-- a tienda usando los dos sistemas.
+create view curso_entradas_tienda
+as 
+select tienda, conteo, fecha
+from curso_super_store_count 
+union all
+select tienda, conteo, convert(datetime,convert(varchar,convert(int, fecha)))
+from curso_market_count
+
+-- 2- Recibimos otro archivo con ingresos a tiendas de meses anteriores. Ingestar el archivo y agregarlo a la vista del ejercicio anterior
+-- (Ejercicio 1 Clase 6). Cual hubiese sido la diferencia si hubiesemos tenido una tabla? 
+-- (contestar la ultima pregunta con un texto escrito en forma de comentario)
+alter view curso_entradas_tienda
+as 
+select tienda, conteo, fecha
+from curso_super_store_count 
+union all
+select tienda, conteo, convert(datetime,convert(varchar,convert(int, fecha)))
+from curso_market_count
+union all
+select tienda, conteo, fecha
+from curso_super_store_count_september
+-- La diferencia hubiese sido en realizar un join de la tabla anterior con esta nueva tabla.
+
+-- 3- Crear una vista con el resultado del ejercicio de la Parte 1 - Clase 3 - Ejercicio 10, donde calculamos el margen 
+-- bruto en dolares. Agregarle la columna de ventas, descuentos, y creditos en dolares para poder reutilizarla en un futuro.
+create view curso_margen_bruto_usd
+as
+select producto, orden, case when moneda = 'ARS' then round(venta / cotizacion_usd_peso, 2)
+when moneda = 'URU' then round(venta / cotizacion_usd_uru,2)
+when moneda = 'EUR' then round(venta / cotizacion_usd_eur,2) end as ventas_usd,
+case when moneda = 'ARS' then round(descuento / cotizacion_usd_peso, 2)
+when moneda = 'URU' then round(descuento / cotizacion_usd_uru,2)
+when moneda = 'EUR' then round(descuento / cotizacion_usd_eur,2) end as descuento_usd,
+case when moneda = 'ARS' then round(creditos / cotizacion_usd_peso, 2)
+when moneda = 'URU' then round(creditos / cotizacion_usd_uru,2)
+when moneda = 'EUR' then round(creditos / cotizacion_usd_eur,2) end as creditos_usd,
+case when moneda = 'ARS' then round(((coalesce(venta,0) + coalesce(descuento,0)) / cotizacion_usd_peso) - coalesce(costo_promedio_usd,0),2)
+when moneda = 'URU' then round(((coalesce(venta,0) + coalesce(descuento,0)) / cotizacion_usd_uru) - coalesce(costo_promedio_usd,0),2)
+when moneda = 'EUR' then round(((coalesce(venta,0) + coalesce(descuento,0)) / cotizacion_usd_eur) - coalesce(costo_promedio_usd,0),2) end as margen_venta_usd
+from curso_order_line_sale as ols
+left join curso_monthly_average_fx_rate on datepart(MONTH,ols.fecha) = datepart(month,curso_monthly_average_fx_rate.mes)
+left join curso_cost on ols.producto = curso_cost.codigo_producto
+
+-- 4- Generar una query que me sirva para verificar que el nivel de agregacion de la tabla de ventas (y de la vista) no se haya 
+--afectado. Recordas que es el nivel de agregacion/detalle? Lo vimos en la teoria de la parte 1! Nota: La orden M999000061 
+--parece tener un problema verdad? Lo vamos a solucionar mas adelante.
+select orden, producto, tienda, fecha, cantidad, venta, descuento, impuestos, creditos, moneda, pos, is_walkout, line_key,
+row_number () over (partition by line_key order by line_key) as rank
+from curso_order_line_sale ols
+
+-- 5- Calcular el margen bruto a nivel Subcategoria de producto. Usar la vista creada.
+select subcategoria, sum(margen_venta_usd) margen_venta_usd
+from curso_margen_bruto_usd mbu
+left join curso_product_master pm on mbu.producto = pm.codigo_producto
+group by subcategoria
+
+-- 6- Calcular la contribucion de las ventas brutas de cada producto al total de la orden. Por esta vez, si necesitas usar 
+-- una subquery, podes utilizarla.
+select orden, producto, ventas_usd, sum(ventas_usd)over(partition by orden) as total_orden,
+round((ventas_usd / sum(ventas_usd)over(partition by orden)) * 100,1) as contribucion_ventas
+from curso_margen_bruto_usd mbu
+inner join curso_product_master pm on mbu.producto = pm.codigo_producto
+order by mbu.orden, producto 
+
+-- 7- Calcular las ventas por proveedor, para eso cargar la tabla de proveedores por producto. Agregar el nombre 
+-- el proveedor en la vista del punto 3.
+select nombre as proveedor, sum(venta) ventas
+from curso_order_line_sale ols
+left join curso_suppliers s on ols.producto = s.codigo_producto where is_primary = 'TRUE'
+group by nombre 
+
+alter view curso_margen_bruto_usd
+as
+select producto, orden, case when moneda = 'ARS' then round(venta / cotizacion_usd_peso, 2)
+when moneda = 'URU' then round(venta / cotizacion_usd_uru,2)
+when moneda = 'EUR' then round(venta / cotizacion_usd_eur,2) end as ventas_usd,
+case when moneda = 'ARS' then round(descuento / cotizacion_usd_peso, 2)
+when moneda = 'URU' then round(descuento / cotizacion_usd_uru,2)
+when moneda = 'EUR' then round(descuento / cotizacion_usd_eur,2) end as descuento_usd,
+case when moneda = 'ARS' then round(creditos / cotizacion_usd_peso, 2)
+when moneda = 'URU' then round(creditos / cotizacion_usd_uru,2)
+when moneda = 'EUR' then round(creditos / cotizacion_usd_eur,2) end as creditos_usd,
+case when moneda = 'ARS' then round(((coalesce(venta,0) + coalesce(descuento,0)) / cotizacion_usd_peso) - coalesce(costo_promedio_usd,0),2)
+when moneda = 'URU' then round(((coalesce(venta,0) + coalesce(descuento,0)) / cotizacion_usd_uru) - coalesce(costo_promedio_usd,0),2)
+when moneda = 'EUR' then round(((coalesce(venta,0) + coalesce(descuento,0)) / cotizacion_usd_eur) - coalesce(costo_promedio_usd,0),2) end as margen_venta_usd,
+nombre as proveedor
+from curso_order_line_sale as ols
+left join curso_monthly_average_fx_rate on datepart(MONTH,ols.fecha) = datepart(month,curso_monthly_average_fx_rate.mes)
+left join curso_cost on ols.producto = curso_cost.codigo_producto
+left join curso_suppliers s on ols.producto = s.codigo_producto where is_primary = 'TRUE'
+
+-- 8- Verificar que el nivel de detalle de la vista anterior no se haya modificado, en caso contrario que se deberia ajustar?
+-- Que decision tomarias para que no se genereren duplicados?
+-- Se pide correr la query de validacion.
+-- Crear una nueva query que no genere duplicacion.
+-- Explicar brevemente (con palabras escrito tipo comentario) que es lo que sucedia.
+-- Query validación:
+alter view curso_margen_bruto_usd
+as
+select producto, orden, case when moneda = 'ARS' then round(venta / cotizacion_usd_peso, 2)
+when moneda = 'URU' then round(venta / cotizacion_usd_uru,2)
+when moneda = 'EUR' then round(venta / cotizacion_usd_eur,2) end as ventas_usd,
+case when moneda = 'ARS' then round(descuento / cotizacion_usd_peso, 2)
+when moneda = 'URU' then round(descuento / cotizacion_usd_uru,2)
+when moneda = 'EUR' then round(descuento / cotizacion_usd_eur,2) end as descuento_usd,
+case when moneda = 'ARS' then round(creditos / cotizacion_usd_peso, 2)
+when moneda = 'URU' then round(creditos / cotizacion_usd_uru,2)
+when moneda = 'EUR' then round(creditos / cotizacion_usd_eur,2) end as creditos_usd,
+case when moneda = 'ARS' then round(((coalesce(venta,0) + coalesce(descuento,0)) / cotizacion_usd_peso) - coalesce(costo_promedio_usd,0),2)
+when moneda = 'URU' then round(((coalesce(venta,0) + coalesce(descuento,0)) / cotizacion_usd_uru) - coalesce(costo_promedio_usd,0),2)
+when moneda = 'EUR' then round(((coalesce(venta,0) + coalesce(descuento,0)) / cotizacion_usd_eur) - coalesce(costo_promedio_usd,0),2) end as margen_venta_usd,
+nombre as proveedor
+from curso_order_line_sale as ols
+left join curso_monthly_average_fx_rate on datepart(MONTH,ols.fecha) = datepart(month,curso_monthly_average_fx_rate.mes)
+left join curso_cost on ols.producto = curso_cost.codigo_producto
+left join curso_suppliers s on ols.producto = s.codigo_producto 
+
+-- Query que no genera duplicación:
+alter view curso_margen_bruto_usd
+as
+select producto, orden, case when moneda = 'ARS' then round(venta / cotizacion_usd_peso, 2)
+when moneda = 'URU' then round(venta / cotizacion_usd_uru,2)
+when moneda = 'EUR' then round(venta / cotizacion_usd_eur,2) end as ventas_usd,
+case when moneda = 'ARS' then round(descuento / cotizacion_usd_peso, 2)
+when moneda = 'URU' then round(descuento / cotizacion_usd_uru,2)
+when moneda = 'EUR' then round(descuento / cotizacion_usd_eur,2) end as descuento_usd,
+case when moneda = 'ARS' then round(creditos / cotizacion_usd_peso, 2)
+when moneda = 'URU' then round(creditos / cotizacion_usd_uru,2)
+when moneda = 'EUR' then round(creditos / cotizacion_usd_eur,2) end as creditos_usd,
+case when moneda = 'ARS' then round(((coalesce(venta,0) + coalesce(descuento,0)) / cotizacion_usd_peso) - coalesce(costo_promedio_usd,0),2)
+when moneda = 'URU' then round(((coalesce(venta,0) + coalesce(descuento,0)) / cotizacion_usd_uru) - coalesce(costo_promedio_usd,0),2)
+when moneda = 'EUR' then round(((coalesce(venta,0) + coalesce(descuento,0)) / cotizacion_usd_eur) - coalesce(costo_promedio_usd,0),2) end as margen_venta_usd,
+nombre as proveedor
+from curso_order_line_sale as ols
+left join curso_monthly_average_fx_rate on datepart(MONTH,ols.fecha) = datepart(month,curso_monthly_average_fx_rate.mes)
+left join curso_cost on ols.producto = curso_cost.codigo_producto
+left join curso_suppliers s on ols.producto = s.codigo_producto where is_primary = 'TRUE'
+
+-- Se generaban duplicados ya que hay varios proveedores para un mismo producto. Se soluciona agregando sobre el join una condición
+-- de is_primary = 'TRUE' para que joinee únicamente esos registros.
