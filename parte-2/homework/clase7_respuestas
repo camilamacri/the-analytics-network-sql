@@ -1,0 +1,174 @@
+-- SQL Server
+-- Clase 7
+
+-- 1- Calcular el porcentaje de valores null de la tabla stg.order_line_sale para la columna creditos y descuentos. 
+-- (porcentaje de nulls en cada columna)
+with porcentaje as (
+select
+	count(case when descuento is null then 1 end) d_is_null, 
+	count(case when creditos is null then 1 end) c_is_null, 
+	count(1) as total
+from curso_order_line_sale
+)
+select 
+	convert(float, d_is_null) /total as porcentaje_nulls_descuentos, 
+	convert(float, c_is_null)/total as porcentaje_nulls_creditos
+from porcentaje 
+
+-- 2- La columna "is_walkout" se refiere a los clientes que llegaron a la tienda y se fueron con el producto en la mano 
+-- (es decia habia stock disponible). Responder en una misma query:
+-- Cuantas ordenes fueron "walkout" por tienda?
+-- Cuantas ventas brutas en USD fueron "walkout" por tienda?
+-- Cual es el porcentaje de las ventas brutas "walkout" sobre el total de ventas brutas por tienda?
+with usd as(
+select 
+	ols.*, 
+	case when moneda = 'ARS' then (coalesce(venta,0) + coalesce(descuento,0) + coalesce(creditos,0))/cotizacion_usd_peso 
+		 when moneda = 'URU' then (coalesce(venta,0) + coalesce(descuento,0) + coalesce(creditos,0))/cotizacion_usd_uru
+		 when moneda = 'EUR' then (coalesce(venta,0) + coalesce(descuento,0) + coalesce(creditos,0))/cotizacion_usd_eur 
+		 end as venta_bruta_usd
+from curso_order_line_sale ols
+left join curso_monthly_average_fx_rate on datepart(MONTH,ols.fecha) = datepart(month,curso_monthly_average_fx_rate.mes)
+)
+select 
+	tienda, 
+	count(case when is_walkout = 'TRUE' then 1 end) ordenes_walkout, 
+	round(sum(case when is_walkout = 'TRUE' then venta_bruta_usd end),2) ventas_brutas_usd_walkout,
+	round(convert(float, sum(case when is_walkout = 'TRUE' then venta_bruta_usd end)) / sum(venta_bruta_usd),2) as porcentaje_vbw_vb
+from usd 
+group by tienda
+
+-- 3- Siguiendo el nivel de detalle de la tabla ventas, hay una orden que no parece cumplirlo. Como identificarias duplicados 
+-- utilizando una windows function? Nota: Esto hace referencia a la orden M999000061. 
+with rank_ols as (
+select 
+	ols.*,
+	row_number () over (partition by line_key order by line_key) as rank_orden
+from curso_order_line_sale ols
+)
+select *
+from rank_ols
+where rank_orden > 1
+
+--Tenes que generar una forma de excluir los casos duplicados, para este caso particular y a nivel general, si llegan mas ordenes con duplicaciones.
+with rank_ols_2 as (
+select 
+	ols.*, 
+	row_number () over (partition by line_key order by line_key) as rank_orden
+from curso_order_line_sale ols
+)
+select *
+from rank_ols_2
+where rank_orden = 1
+
+-- 4- Obtener las ventas totales en USD de productos que NO sean de la categoria "TV" NI esten en tiendas de Argentina.
+with ventas_usd as (
+select
+	ols.*, 
+	subcategoria, 
+	case when moneda = 'ARS' then venta /cotizacion_usd_peso 
+		 when moneda = 'URU' then venta /cotizacion_usd_uru
+		 when moneda = 'EUR' then venta /cotizacion_usd_eur end as ventas_usd
+from curso_order_line_sale ols
+	left join curso_product_master pm on ols.producto = pm.codigo_producto
+	left join curso_monthly_average_fx_rate on datepart(MONTH,ols.fecha) = datepart(month,curso_monthly_average_fx_rate.mes)
+where 
+	subcategoria <> 'TV' 
+	and tienda not in (1, 2, 3, 5)
+)
+select 
+	producto, 
+	subcategoria, 
+	round(sum(ventas_usd),2) ventas_usd
+from ventas_usd
+group by producto, subcategoria
+order by producto 
+
+-- 5- El gerente de ventas quiere ver el total de unidades vendidas por dia junto con otra columna con la cantidad de unidades
+-- vendidas una semana atras y la diferencia entre ambos. Nota: resolver en dos querys usando en una CTEs y en la otra windows functions.
+with unidades_dia as (
+select 
+	fecha, 
+	sum(cantidad) unidades_vendidas
+from curso_order_line_sale
+group by fecha
+)
+select 
+	ud1.fecha, 
+	sum(coalesce(ud1.unidades_vendidas,0)) unidades_vendidas, 
+	ud2.fecha as fecha_semana_atras,
+	sum(coalesce(ud2.unidades_vendidas,0)) unidades_vendidas_semana_atras, 
+	sum(coalesce(ud2.unidades_vendidas,0)) - sum(coalesce(ud1.unidades_vendidas,0)) as diferencia
+from unidades_dia ud1
+	inner join unidades_dia ud2 on ud2.fecha = dateadd(day, -7, ud1.fecha)
+group by ud1.fecha, ud2.fecha
+
+-- 6- 
+-- Crear una vista de inventario con la cantidad de inventario por dia, tienda y producto, que ademas va a contar con los siguientes datos: 
+-- Nombre y categorias de producto, 
+-- pais y nombre de tienda, 
+-- Costo del inventario por linea (recordar que si la linea dice 4 unidades debe reflejar el costo total de esas 4 unidades), 
+-- Una columna llamada "is_last_snapshot" para el ultimo dia disponible de inventario.
+-- Ademas vamos a querer calcular una metrica llamada "Average days on hand (DOH)" que mide cuantos dias de venta nos alcanza el inventario. 
+-- Para eso DOH = Unidades en Inventario Promedio / Promedio diario Unidades vendidas ultimos 7 dias.
+-- Notas: Antes de crear la columna DOH, conviene crear una columna que refleje el Promedio diario Unidades vendidas ultimos 7 dias.
+-- El nivel de agregacion es dia/tienda/sku. El Promedio diario Unidades vendidas ultimos 7 dias tiene que calcularse para cada dia.
+
+with inventario as (
+select 
+	fecha, 
+	tienda, 
+	sku, 
+	(inicial+final)/2 as inventario_promedio
+from curso_inventory
+)
+, costo_inventario as (
+select 
+	fecha,
+	tienda,
+	sku,
+	sum(costo_promedio_usd) as costo_inventario_usd
+from curso_cost c
+left join curso_inventory i on c.codigo_producto = i.sku
+group by fecha, tienda, sku 
+)
+, last_snapshot as (
+select 
+	max(fecha) as is_last_snapshot
+from curso_inventory 
+)
+, ventas as (
+select 
+	fecha, 
+	tienda, 
+	producto,
+	sum(cantidad) as cantidad
+from curso_order_line_sale 
+group by fecha, tienda, producto 
+)
+, ventas2 as (
+select 
+	v.fecha, 
+	v.tienda, 
+	v.producto, 
+	sum(case when v.fecha -  v2.fecha <= 6 then v2.cantidad else 0 end) as ventas_ult_siete_dias
+from ventas v
+	left join ventas v2 on v.tienda = v2.tienda 
+			  and v.producto = v2.producto 
+			  and v2.fecha <= v.fecha
+group by v.fecha, v.tienda, v.producto
+)
+select 
+	i.*, 
+	pm.nombre,
+	pm.categoria, 
+	sm.pais, 
+	sm.nombre,
+	costo_inventario_usd,
+	case when i.fecha = (select max(fecha) as is_last_snapshot from curso_inventory) then 'True' else 'False' end as is_last_snapshot,
+	round(inventario_promedio/(ventas_ult_siete_dias/'7'),0) as doh
+from inventario i
+	left join curso_product_master pm on i.sku = pm.codigo_producto
+	left join curso_store_master sm on i.tienda = sm.codigo_tienda
+	left join ventas2 on i.fecha = ventas2.fecha
+	left join costo_inventario ci on i.fecha = ci.fecha and i.tienda = ci.tienda and i.sku = ci.sku 
