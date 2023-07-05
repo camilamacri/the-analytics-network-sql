@@ -1,0 +1,78 @@
+-- SQL Server
+-- Clase 2
+
+-- 1
+select distinct pais
+from curso_store_master
+
+-- 2	
+select subcategoria, count(nombre) as productos_disponibles
+from curso_product_master
+group by subcategoria
+
+-- 3	
+select orden, moneda, venta
+from curso_order_line_sale
+where moneda = 'ARS' and venta > 100000
+
+-- 4
+select moneda, sum(descuento) as descuentos
+from curso_order_line_sale
+where fecha between '2022-11-01' and '2022-11-30'
+group by moneda
+
+-- 5
+select moneda, sum(impuestos) as impuestos
+from curso_order_line_sale
+where year(fecha) = 2022
+group by moneda
+
+-- 6
+select count(orden) as ordenes
+from curso_order_line_sale
+where creditos is not null
+
+-- 7
+select tienda, sum(descuento)/sum(venta) as tasa_descuentos
+from curso_order_line_sale
+group by tienda
+
+-- 8
+select tienda, fecha, avg((inicial+final)/2) as promedio_inventario
+from curso_inventory
+group by tienda, fecha
+order by fecha
+
+-- 9
+select producto, sum(coalesce(venta,0) + coalesce(descuento,0)) as ventas_netas, sum(descuento)/sum(venta) as porcentaje_descuentos
+from curso_order_line_sale
+where moneda = 'ARS'
+group by producto
+
+-- 10
+select tienda, conteo, fecha
+from curso_super_store_count 
+union all
+select tienda, conteo, convert(datetime,convert(varchar,convert(int, fecha)))
+from curso_market_count
+
+-- 11
+select *
+from curso_product_master
+where is_active = 'TRUE' and nombre like '%PHILIPS%'
+
+-- 12	
+select tienda, moneda, sum(venta) as monto_vendido
+from curso_order_line_sale
+group by tienda, moneda
+order by sum(venta) desc
+
+-- 13
+select producto, moneda, sum(venta)/sum(cantidad) as promedio_venta
+from curso_order_line_sale
+group by producto, moneda
+
+-- 14
+select orden, sum(impuestos)/sum(venta) as tasa_impuestos
+from curso_order_line_sale
+group by orden
