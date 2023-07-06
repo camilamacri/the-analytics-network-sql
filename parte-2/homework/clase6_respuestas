@@ -61,11 +61,12 @@ group by subcategoria
 
 -- 6- Calcular la contribucion de las ventas brutas de cada producto al total de la orden. Por esta vez, si necesitas usar 
 -- una subquery, podes utilizarla.
-select orden, producto, ventas_usd, sum(ventas_usd)over(partition by orden) as total_orden,
-round((ventas_usd / sum(ventas_usd)over(partition by orden)) * 100,1) as contribucion_ventas
-from curso_margen_bruto_usd mbu
-inner join curso_product_master pm on mbu.producto = pm.codigo_producto
-order by mbu.orden, producto 
+select orden, producto, ventas_usd, sum(ventas_usd) as ventas_prod_orden, 
+sum(ventas_usd) over(partition by orden) as ventas_total_orden,
+round((sum(ventas_usd) / sum(ventas_usd) over(partition by orden)) * 100,2) as contribucion_ventas
+from curso_margen_bruto_usd 
+where ventas_usd <> 0
+group by orden, producto, ventas_usd 
 
 -- 7- Calcular las ventas por proveedor, para eso cargar la tabla de proveedores por producto. Agregar el nombre 
 -- el proveedor en la vista del punto 3.
