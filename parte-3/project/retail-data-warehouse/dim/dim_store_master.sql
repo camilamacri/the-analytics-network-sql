@@ -2,7 +2,7 @@
 
 DROP TABLE IF EXISTS dim.store_master;
 
-CREATE TABLE dim.store_master
+CREATE TABLE IF NOT EXISTS dim.store_master
                  (
                               codigo_tienda_id  SMALLINT PRIMARY KEY
                             , pais           VARCHAR(100)
