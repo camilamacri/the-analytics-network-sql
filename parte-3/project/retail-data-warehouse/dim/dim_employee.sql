@@ -4,7 +4,7 @@ DROP TABLE IF EXISTS dim.employee;
 
 CREATE TABLE IF NOT EXISTS dim.employee
 		          (
-			                    id              SERIAL PRIMARY KEY
+			                    id            SMALLINT IDENTITY(1,1) PRIMARY KEY
 		                  	, nombre          VARCHAR(50)
 		                  	, apellido        VARCHAR(50)
 		                  	, fecha_entrada   DATE
