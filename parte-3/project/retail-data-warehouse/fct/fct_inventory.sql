@@ -7,7 +7,7 @@ DROP TABLE IS EXISTS fct.inventory;
 CREATE TABLE IF NOT EXISTS fct.inventory
                  (
                               tienda  SMALLINT 
-                            , sku     VARCHAR(10)
+                            , sku     VARCHAR(255)
                             , fecha   DATE
                             , inicial SMALLINT
                             , final   SMALLINT
