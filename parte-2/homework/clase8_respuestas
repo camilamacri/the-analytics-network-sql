@@ -1,0 +1,138 @@
+-- SQL Server
+-- Clase 8
+
+-- 1- Realizar el Ejercicio 6 de la clase 6 donde calculabamos la contribucion de las ventas brutas de cada producto 
+-- utilizando una window function.
+
+-- Ya lo había realizado con una window function: 
+select 
+	orden, 
+	producto,
+	ventas_usd, 
+	sum(ventas_usd) as ventas_prod_orden, 
+	sum(ventas_usd) over(partition by orden) as ventas_total_orden,
+	round(sum(ventas_usd) / sum(ventas_usd) over(partition by orden),3) as contribucion_ventas
+from 
+	curso_margen_bruto_usd 
+where 
+	ventas_usd <> 0
+group by
+	orden, producto, ventas_usd
+order by
+	orden 
+
+-- 2- La regla de pareto nos dice que aproximadamente un 20% de los productos generan un 80% de las ventas.
+-- Armar una vista a nivel sku donde se pueda identificar por orden de contribucion, ese 20% aproximado de SKU mas importantes. 
+-- (Nota: En este ejercicios estamos construyendo una tabla que muestra la regla de Pareto)
+
+-- Tuve que agregar el top 9 ya que no me permitía hacer un order by para una view:
+create view contribucion_ventas_pareto
+as 
+with pareto as (
+select  
+	producto,
+	round(sum(ventas_usd) over(partition by producto) / sum(ventas_usd) over(),3) as contribucion_ventas
+from 
+	curso_margen_bruto_usd 
+group by
+	producto,ventas_usd
+)
+select 
+	top 9 producto,
+	sum(contribucion_ventas) over(partition by producto) as contribucion_pareto
+from 
+	pareto 
+group by	
+	producto, contribucion_ventas
+order by 
+		contribucion_pareto desc
+
+-- 3- Calcular el crecimiento de ventas por tienda mes a mes, con el valor nominal y el valor % de crecimiento.
+with usd as(
+select 
+	ols.*, 
+	case when moneda = 'ARS' then coalesce(venta,0) / cotizacion_usd_peso 
+		 when moneda = 'URU' then coalesce(venta,0) / cotizacion_usd_uru
+		 when moneda = 'EUR' then coalesce(venta,0) / cotizacion_usd_eur 
+		 end as ventas_usd
+from curso_order_line_sale ols
+left join curso_monthly_average_fx_rate on datepart(MONTH,ols.fecha) = datepart(month,curso_monthly_average_fx_rate.mes)
+)
+, crecimiento_ventas as (
+select
+	tienda,
+	format(fecha, 'yyyy-MM') as año_mes,
+	round(sum(ventas_usd),2) as ventas_mes_usd
+from usd
+group by tienda, format(fecha, 'yyyy-MM'), moneda
+)
+select 
+	tienda,
+	año_mes,
+	ventas_mes_usd,
+	round(lag(ventas_mes_usd) over(partition by tienda order by año_mes asc) - ventas_mes_usd, 2) as crecimiento_nominal,
+	round(((lag(ventas_mes_usd) over(partition by tienda order by año_mes) - ventas_mes_usd)/ventas_mes_usd) * 100, 2) as porcentaje	
+from crecimiento_ventas 
+
+-- 4- Crear una vista a partir de la tabla "return_movements" que este a nivel Orden de venta, item y que contenga 
+-- las siguientes columnas: Orden, Sku, Cantidad unidated retornadas, Nombre producto, 
+-- Valor USD retornado (resulta de la cantidad retornada * valor USD del precio unitario bruto con que se hizo la venta),
+-- Primera_locacion (primer lugar registrado, de la columna "desde", para la orden/producto),
+-- Ultima_locacion (el ultimo lugar donde se registro, de la columna "hasta", el producto/orden)
+create view curso_return_movements_usd
+as 
+select 
+	distinct orden_venta as orden,
+	item as sku,
+	rm.cantidad as cant_unidades_retor,
+	rm.cantidad*costo_promedio_usd as valor_usd_retornado,
+	nombre as nombre_producto,
+	first_value(desde) over(partition by orden_venta, item order by id_movimiento asc) as primera_locacion,
+	last_value(hasta) over(partition by orden_venta, item order by id_movimiento asc rows between unbounded preceding and unbounded following) as ultima_locacion
+from 
+	curso_return_movements rm
+left join
+	curso_cost cc on rm.item = cc.codigo_producto
+left join 
+	curso_product_master pm on rm.item = pm.codigo_producto
+
+-- 5- Crear una tabla calendario llamada "date" con las fechas del 2022 incluyendo el año fiscal y trimestre fiscal (en ingles Quarter).
+-- El año fiscal de la empresa comienza el primero Febrero de cada año y dura 12 meses. Realizar la tabla para 2022 y 2023. La tabla debe contener:
+-- Fecha (date)
+-- Mes (date)
+-- Año (date)
+-- Dia de la semana (text, ejemplo: "Monday")
+-- "is_weekend" (boolean, indicando si es Sabado o Domingo)
+-- Mes (text, ejemplo: June)
+-- Año fiscal (date)
+-- Año fiscal (text, ejemplo: "FY2022")
+-- Trimestre fiscal (text, ejemplo: Q1)
+-- Fecha del año anterior (date, ejemplo: 2021-01-01 para la fecha 2022-01-01)
+-- Nota: En general una tabla date es creada para muchos años mas (minimo 10), por el momento nos ahorramos ese paso y de la creacion de feriados.
+with numeros as (
+    select row_number() over (order by (select null)) - 1 as n
+    from sys.all_columns as ac1
+    cross join sys.all_columns as ac2
+)
+, tabla_calendario as (
+select dateadd(day, n, cast('2022-01-01' as date)) as fecha
+from numeros 
+where n <= 365
+)
+select 
+	cast(replace(convert(varchar, fecha, 112), '-', '') as int) as fecha_id,
+	fecha,
+	datepart(month,fecha) as mes,
+	datepart(year,fecha) as año,
+	datename(WEEKDAY,fecha) dia_semana,
+	case when datename(WEEKDAY,fecha) in ('Sábado','Domingo') then 'Si' else 'No' end as fin_de_semana,
+	datename(month,fecha) mes_texto,
+	datefromparts(case when datepart(month,fecha) < 2 then datepart(year,fecha) -1 else datepart(year, fecha) end, 2, 1) as año_fiscal,
+	concat('FY', case when datepart (month, fecha) < 2 then datepart(year, fecha) - 1 else DATEPART(YEAR, fecha) end) as año_fiscal_texto,
+	concat('Q', case when datepart(month,fecha) in (2, 3, 4) then '1' 
+					 when datepart(month,fecha) in (5, 6, 7) then '2'
+		   			 when datepart(month,fecha) in (8, 9, 10) then '3' else '4'end) as trimestre_fiscal,
+	dateadd(year, -1, fecha) as fecha_año_anterior
+into curso_date
+from tabla_calendario
+
