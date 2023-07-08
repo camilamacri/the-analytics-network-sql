@@ -1,6 +1,10 @@
-CREATE TABLE fct.order_line_sale
+-- Table: stg.order_line_sale
+
+DROP TABLE IS EXISTS fct.order_line_sale;
+
+CREATE TABLE IF NOT EXISTS fct.order_line_sale
                  (
-                              orden      VARCHAR(10) PRIMARY KEY
+                              orden_id      VARCHAR(10) PRIMARY KEY
                             , producto   VARCHAR(10)
                             , tienda     SMALLINT
                             , fecha      date
@@ -14,8 +18,8 @@ CREATE TABLE fct.order_line_sale
                             , is_walkout BOOLEAN
    					                , CONSTRAINT producto_fk
 					                    FOREIGN KEY (producto)
-					                    REFERENCES dim.product_master (codigo_producto),
+					                    REFERENCES dim.product_master (codigo_producto_id),
 					                  , CONSTRAINT tienda_fk
 					                    FOREIGN KEY (tienda)
-					                    REFERENCES dim.store_master (codigo_tienda)
+					                    REFERENCES dim.store_master (codigo_tienda_id)
                  );
