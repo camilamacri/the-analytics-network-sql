@@ -1,5 +1,5 @@
 -- SQL Server
--- Ejercicio Integrador 2
+-- Ejercicios Entrevistas 2
 
 -- 1- Cuales son las ciudades donde la afluencia de turistas es continuamente creciente
 create schema test;
