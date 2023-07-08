@@ -1,0 +1,46 @@
+select 
+	d.fecha,
+	day(d.fecha) as dia,
+	d.mes,
+	año,
+	año_fiscal,
+	año_fiscal_texto,
+	trimestre_fiscal,
+	sku,
+	categoria,
+	subcategoria,
+	subsubcategoria,
+	origen as proveedor,
+	i.tienda,
+	pais,
+	provincia,
+	sm.nombre as nombre_tienda,
+	case when moneda = 'ARS' then round(venta / cotizacion_usd_peso,2)
+	when moneda = 'URU' then round(venta / cotizacion_usd_uru,2)
+	when moneda = 'EUR' then round(venta/ cotizacion_usd_eur,2) end as venta_usd,
+	case when moneda = 'ARS' then round(impuestos / cotizacion_usd_peso,2)
+	when moneda = 'URU' then round(impuestos / cotizacion_usd_uru,2)
+	when moneda = 'EUR' then round(impuestos / cotizacion_usd_eur,2) end as impuestos_usd,
+	case when moneda = 'ARS' then round(descuento / cotizacion_usd_peso,2)
+	when moneda = 'URU' then round(descuento / cotizacion_usd_uru,2)
+	when moneda = 'EUR' then round(descuento / cotizacion_usd_eur,2) end as descuento_usd,
+	case when moneda = 'ARS' then round(creditos / cotizacion_usd_peso,2)
+	when moneda = 'URU' then round(creditos / cotizacion_usd_uru,2)
+	when moneda = 'EUR' then round(creditos / cotizacion_usd_eur,2) end as creditos_usd,
+	moneda,
+	costo_promedio_usd,
+	ols.orden, 
+	ols.cantidad as cantidad_productos,
+	rm.cantidad as cantidad_devoluciones,
+	conteo as entradas
+from 
+	curso_date d
+	left join curso_inventory i on d.fecha = i.fecha
+	left join curso_order_line_sale ols 
+	on d.fecha = ols.fecha and ols.producto = coalesce(i.sku, ols.producto) and ols.tienda = coalesce(i.tienda, ols.tienda)
+	left join curso_product_master pm on ols.producto = pm.codigo_producto
+	left join curso_store_master sm on i.tienda = sm.codigo_tienda
+	left join curso_cost c on i.sku = c.codigo_producto
+    left join curso_return_movements rm on i.sku = rm.item
+	left join curso_super_store_count ssc on ols.tienda = ssc.tienda and ols.fecha = ssc.fecha
+	left join curso_monthly_average_fx_rate on datepart(MONTH,ols.fecha) = datepart(month,curso_monthly_average_fx_rate.mes) 
