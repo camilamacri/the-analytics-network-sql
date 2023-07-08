@@ -1,6 +1,6 @@
 CREATE TABLE dim.supplier
             	(
-		                codigo_producto  SMALLINT PRIMARY KEY
+		                codigo_producto  SMALLINT 
 		                , nombre         VARCHAR(255)
 		                , is_primary     BOOL default false
                     , CONSTRAINT codigo_producto_fk
