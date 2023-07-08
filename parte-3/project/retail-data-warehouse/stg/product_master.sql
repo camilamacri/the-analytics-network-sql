@@ -1,6 +1,3 @@
--- Crear schema stg
-CREATE SCHEMA IF NOT EXISTS stg;
-
 /* Crear tabla products
 Maestro de productos que posee la empresa. 
 is_active indica que productos estan actualmente a la venta
