@@ -6,7 +6,7 @@ DROP TABLE IF EXISTS stg.order_line_sale;
 CREATE TABLE stg.order_line_sale
                  (
                               orden      VARCHAR(10)
-                            , producto   VARCHAR(10)
+                            , producto   VARCHAR(255)
                             , tienda     SMALLINT
                             , fecha      date
                             , cantidad   int
