@@ -5,6 +5,6 @@ DROP TABLE IF EXISTS stg.cost;
     
 CREATE TABLE stg.cost
                  (
-                              codigo_producto    VARCHAR(10)
+                              codigo_producto    VARCHAR(255)
                             , costo_promedio_usd DECIMAL
                  );
