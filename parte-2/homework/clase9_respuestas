@@ -1,0 +1,74 @@
+-- SQL Server
+-- Clase 9
+
+-- 1- Calcular el crecimiento de ventas por tienda mes a mes, con el valor nominal y el valor % de crecimiento. Utilizar self join.
+with ventas_mes as (
+select 
+	tienda,
+	datepart(month, fecha) as mes,
+	sum(venta) as ventas
+from 
+	curso_order_line_sale
+group by tienda, datepart(month, fecha)
+)
+select
+	vm1.tienda,
+	vm2.mes as mes_anterior,
+	vm2.ventas as ventas_mes_anterior,
+	vm1.mes,
+	vm1.ventas,
+	vm1.ventas - coalesce(vm2.ventas, 0) as crecimiento_ventas,
+	round(((vm1.ventas - coalesce(vm2.ventas, 0))/vm1.ventas)*100, 2) as crecimiento_ventas_porcentaje
+from
+	ventas_mes vm1
+inner join 
+		ventas_mes vm2 on vm2.mes = vm1.mes - 1
+		and vm2.tienda = vm1.tienda
+
+-- 2- Hacer un update a la tabla de product_master agregando una columna llamada "marca", con la marca de cada producto 
+-- con la primer letra en mayuscula. Sabemos que las marcas que tenemos. En caso de no encontrarse en la lista usar 'Unknown'.
+alter table curso_product_master
+add marca varchar(255)
+
+update curso_product_master
+set marca = case when lower(nombre) like '%samsung%' then 'Samsung'
+				 when lower(nombre) like '%philips%' then 'Philips'
+				 when lower(nombre) like '%jbl%' then 'JBL'
+				 when lower(nombre) like '%motorola%' then 'Motorola'
+				 when lower(nombre) like '%acer%' then 'Acer'
+				 when lower(nombre) like '%tommy%' then 'Tommy Hilfiger'
+				 when lower(nombre) like '%levi%' then 'Levi´s'
+				 else 'Unknown' end 
+
+-- 3- 
+create table curso_competencia 
+(empresa varchar(255),
+rubro varchar (255),
+facturacion bigint)
+
+insert into curso_competencia
+values ('El Corte Ingles',	'Departamental', '110990000000000'),
+	   ('Mercado Libre', 'ECOMMERCE', '115860000000000'),
+	   ('Fallabela','departamental', '20460000'),
+	   ('Tienda Inglesa','Departamental', '10780000'),
+	   ('Zara',	'INDUMENTARIA',	'999980000')
+
+with tabla as (
+select
+	lower(rubro) as rubro,
+	sum(facturacion) as facturacion_total
+from 
+	curso_competencia
+group by 
+	lower(rubro)
+)
+select 
+	rubro,
+	case 
+	when facturacion_total > 1000000000 then concat(format(facturacion_total/1000000000000.0, 'N2'), 'B')
+    when facturacion_total > 1000000 then format(facturacion_total/1000000.0, 'N2') + 'M'
+	end as facturacion_total
+from
+	tabla 
+order by 
+	rubro asc
