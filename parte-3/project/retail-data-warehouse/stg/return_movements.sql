@@ -6,7 +6,7 @@ CREATE TABLE stg.return_movements
               	(
 		        	 orden_venta  		VARCHAR(10)
 		                 , envio 		VARCHAR(10)
-		                 , item 		VARCHAR(10)
+		                 , item 		VARCHAR(255)
 	                         , cantidad 		INT
                         	 , id_movimiento 	INT
                         	 , desde 		VARCHAR(100)
