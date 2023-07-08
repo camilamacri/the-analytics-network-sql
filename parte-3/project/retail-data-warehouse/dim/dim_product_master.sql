@@ -1,6 +1,10 @@
-CREATE TABLE dim.product_master
+-- Table: stg.product_master
+
+DROP TABLE IF EXISTS dim.product_master;
+
+CREATE TABLE IF NOT EXISTS dim.product_master
                  (
-                              codigo_producto VARCHAR(255) PRIMARY KEY
+                              codigo_producto_id VARCHAR(255) PRIMARY KEY
                             , nombre          VARCHAR(255)
                             , categoria       VARCHAR(255)
                             , subcategoria    VARCHAR(255)
