@@ -4,7 +4,7 @@ Tabla maestra empleados
 
 CREATE TABLE stg.employee
 		          (
-			                    id            INT IDENTITY(1,1) 
+			                    id            SMALLINT IDENTITY(1,1) 
 		                  	, nombre          VARCHAR(50)
 		                  	, apellido        VARCHAR(50)
 		                  	, fecha_entrada   DATE
