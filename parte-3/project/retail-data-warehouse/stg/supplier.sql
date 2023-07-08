@@ -6,5 +6,5 @@ CREATE TABLE stg.supplier
             	(
 		                codigo_producto  SMALLINT
 		                , nombre         VARCHAR(255)
-		                , is_primary     BOOL default false
+		                , is_primary     VARCHAR(5)
             	);
