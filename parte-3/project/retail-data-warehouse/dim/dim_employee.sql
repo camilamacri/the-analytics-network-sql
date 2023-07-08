@@ -1,4 +1,8 @@
-CREATE TABLE dim.employee
+-- Table: stg.employee
+
+DROP TABLE IF EXISTS dim.employee;
+
+CREATE TABLE IF NOT EXISTS dim.employee
 		          (
 			                    id              SERIAL PRIMARY KEY
 		                  	, nombre          VARCHAR(50)
@@ -11,6 +15,6 @@ CREATE TABLE dim.employee
 			                  , codigo_tienda   SMALLINT
 			                  , posicion        VARCHAR(100)
                         , CONSTRAINT id_fk
-					                FOREIGN KEY (id)
-				                	REFERENCES dim.store_master (codigo_tienda)
+			FOREIGN KEY (id)
+			REFERENCES dim.store_master (codigo_tienda_id)
 	        	);
