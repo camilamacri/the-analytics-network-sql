@@ -2,7 +2,7 @@
 
 DROP TABLE IS EXISTS dim.supplier;
 
-CREATE TABLE dim.supplier
+CREATE TABLE IF NOT EXISTS dim.supplier
             	(
 		                codigo_producto_id  SMALLINT 
 		                , nombre         VARCHAR(255)
