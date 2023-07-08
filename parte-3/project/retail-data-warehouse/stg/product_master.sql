@@ -16,7 +16,7 @@ CREATE TABLE stg.product_master
                             , color           VARCHAR(255)
                             , origen          VARCHAR(255)
                             , ean             bigint
-                            , is_active       boolean
-                            , has_bluetooth   boolean
+                            , is_active       int
+                            , has_bluetooth   int
                             , talle           VARCHAR(255)
                  );
