@@ -1,6 +1,10 @@
+-- Table: stg.store_master
+
+DROP TABLE IF EXISTS dim.store_master;
+
 CREATE TABLE dim.store_master
                  (
-                              codigo_tienda  SMALLINT PRIMARY KEY
+                              codigo_tienda_id  SMALLINT PRIMARY KEY
                             , pais           VARCHAR(100)
                             , provincia      VARCHAR(100)
                             , ciudad         VARCHAR(100)
