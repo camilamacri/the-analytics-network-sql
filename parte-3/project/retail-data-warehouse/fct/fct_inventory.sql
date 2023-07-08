@@ -2,7 +2,7 @@ CREATE SCHEMA fct;
 
 CREATE TABLE fct.inventory
                  (
-                              tienda  SMALLINT PRIMARY KEY
+                              tienda  SMALLINT 
                             , sku     VARCHAR(10)
                             , fecha   DATE
                             , inicial SMALLINT
