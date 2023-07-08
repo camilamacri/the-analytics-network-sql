@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS fct.super_store_count
                               tienda_id SMALLINT PRIMARY KEY
                             , fecha  VARCHAR(10)
                             , conteo SMALLINT
-                            , CONSTRAINT tienda_id_fk
+                            , CONSTRAINT tienda_id_fk3
 					                    FOREIGN KEY (tienda_id)
 					                    REFERENCES dim.store_master (codigo_tienda_id)
                  );
