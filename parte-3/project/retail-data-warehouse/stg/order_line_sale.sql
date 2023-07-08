@@ -16,5 +16,5 @@ CREATE TABLE stg.order_line_sale
                             , creditos   decimal(18,5)
                             , moneda     varchar(3)
                             , pos        SMALLINT
-                            , is_walkout BOOLEAN
+                            , is_walkout int
                  );
