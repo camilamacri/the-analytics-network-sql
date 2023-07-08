@@ -1,7 +1,8 @@
 -- SQL Server
 -- Clase 4
 
--- 1
+-- 1 
+-- No me deja utilizar un schema llamado "bkp"
 select * into bkp_curso_product_master
 from curso_product_master
 
