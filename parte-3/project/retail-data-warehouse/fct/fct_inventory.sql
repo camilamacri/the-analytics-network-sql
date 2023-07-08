@@ -1,6 +1,10 @@
+-- Table: stg.inventory
+
 CREATE SCHEMA fct;
 
-CREATE TABLE fct.inventory
+DROP TABLE IS EXISTS fct.inventory;
+
+CREATE TABLE IF NOT EXISTS fct.inventory
                  (
                               tienda  SMALLINT 
                             , sku     VARCHAR(10)
@@ -9,8 +13,8 @@ CREATE TABLE fct.inventory
                             , final   SMALLINT
                             , CONSTRAINT tienda_fk
 					                    FOREIGN KEY (tienda)
-					                    REFERENCES dim.store_master (codigo_tienda)
+					                    REFERENCES dim.store_master (codigo_tienda_id)
 					                  , CONSTRAINT sku_fk
 					                    FOREIGN KEY (sku)
-					                    REFERENCES dim.product_master (codigo_producto)
+					                    REFERENCES dim.product_master (codigo_producto_id)
                  );
