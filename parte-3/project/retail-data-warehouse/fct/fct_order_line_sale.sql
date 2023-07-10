@@ -19,7 +19,4 @@ CREATE TABLE IF NOT EXISTS fct.order_line_sale
    					                , CONSTRAINT producto_fk
 					                    FOREIGN KEY (producto)
 					                    REFERENCES dim.product_master (codigo_producto_id)
-					                  , CONSTRAINT tienda_fk2
-					                    FOREIGN KEY (tienda)
-					                    REFERENCES dim.store_master (codigo_tienda_id)
                  );
