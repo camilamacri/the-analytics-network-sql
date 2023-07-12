@@ -1,23 +1,42 @@
+with ajustes as (
+select
+	orden,
+	producto,
+	200 / count(1) over() as ajuste
+from curso_order_line_sale ols
+left join curso_product_master pm on pm.codigo_producto = ols.producto where lower(pm.nombre) like '%philips%'
+)
+, devoluciones as (
 select 
-	d.fecha,
-	day(d.fecha) as dia,
+	orden_venta as orden,
+	item,
+	min(cantidad) as cantidad_devuelta
+from curso_return_movements
+group by orden_venta, item
+)
+, ventas as (
+select 
+	ols.producto as sku,
+	ols.orden,
+	ols.tienda,
+	ols.fecha,
+	datepart(day,ols.fecha) as dia,
 	d.mes,
-	año,
-	año_fiscal,
-	año_fiscal_texto,
-	trimestre_fiscal,
-	sku,
-	categoria,
-	subcategoria,
-	subsubcategoria,
-	origen as proveedor,
-	i.tienda,
-	pais,
-	provincia,
+	d.año,
+	d.año_fiscal,
+	d.año_fiscal_texto,
+	d.trimestre_fiscal,
+	pm.nombre,
+	pm.categoria,
+	pm.subcategoria,
+	pm.subsubcategoria,
+	s.nombre as proveedor,
+	sm.pais,
+	sm.provincia,
 	sm.nombre as nombre_tienda,
 	case when moneda = 'ARS' then round(venta / cotizacion_usd_peso,2)
 	when moneda = 'URU' then round(venta / cotizacion_usd_uru,2)
-	when moneda = 'EUR' then round(venta/ cotizacion_usd_eur,2) end as venta_usd,
+	when moneda = 'EUR' then round(venta / cotizacion_usd_eur,2) end as venta_usd,
 	case when moneda = 'ARS' then round(impuestos / cotizacion_usd_peso,2)
 	when moneda = 'URU' then round(impuestos / cotizacion_usd_uru,2)
 	when moneda = 'EUR' then round(impuestos / cotizacion_usd_eur,2) end as impuestos_usd,
@@ -27,20 +46,78 @@ select
 	case when moneda = 'ARS' then round(creditos / cotizacion_usd_peso,2)
 	when moneda = 'URU' then round(creditos / cotizacion_usd_uru,2)
 	when moneda = 'EUR' then round(creditos / cotizacion_usd_eur,2) end as creditos_usd,
-	moneda,
-	costo_promedio_usd,
-	ols.orden, 
+	ols.cantidad * costo_promedio_usd as costo_producto_usd,
 	ols.cantidad as cantidad_productos,
-	rm.cantidad as cantidad_devoluciones,
-	conteo as entradas
-from 
-	curso_date d
-	left join curso_inventory i on d.fecha = i.fecha
-	left join curso_order_line_sale ols 
-	on d.fecha = ols.fecha and ols.producto = coalesce(i.sku, ols.producto) and ols.tienda = coalesce(i.tienda, ols.tienda)
+	aj.ajuste as ajuste_usd,
+	dv.cantidad_devuelta as cantidad_devoluciones
+from curso_order_line_sale ols 
+	left join curso_date d on ols.fecha = d.fecha
 	left join curso_product_master pm on ols.producto = pm.codigo_producto
-	left join curso_store_master sm on i.tienda = sm.codigo_tienda
-	left join curso_cost c on i.sku = c.codigo_producto
-    left join curso_return_movements rm on i.sku = rm.item
+	left join curso_store_master sm on ols.tienda = sm.codigo_tienda
+	left join curso_cost c on ols.producto = c.codigo_producto
+	left join devoluciones dv on ols.producto = dv.item and ols.orden = dv.orden
+	left join ajustes aj on ols.producto = aj.producto and ols.orden = aj.orden
 	left join curso_super_store_count ssc on ols.tienda = ssc.tienda and ols.fecha = ssc.fecha
-	left join curso_monthly_average_fx_rate on datepart(MONTH,ols.fecha) = datepart(month,curso_monthly_average_fx_rate.mes) 
+	left join curso_monthly_average_fx_rate on datepart(MONTH,ols.fecha) = datepart(month,curso_monthly_average_fx_rate.mes)
+	left join curso_suppliers s on ols.producto =  s.codigo_producto where s.is_primary = 'TRUE'
+)
+select 
+	v.sku,
+	v.tienda,
+	v.fecha,
+	dia,
+	mes,
+	año,
+	año_fiscal,
+	año_fiscal_texto,
+	trimestre_fiscal,
+	nombre,
+	categoria,
+	subcategoria,
+	subsubcategoria,
+	proveedor,
+	pais,
+	provincia,
+	nombre_tienda,
+	venta_usd,
+	impuestos_usd,
+	descuento_usd,
+	creditos_usd,
+	costo_producto_usd,
+	cantidad_productos,
+	ajuste_usd,
+	cantidad_devoluciones,
+	sum(cantidad_productos) as cantidad,
+	sum(venta_usd) as ventas_usd,
+	count(distinct orden) as orden,
+	sum(venta_usd) + sum(coalesce(descuento_usd,0)) as ventas_netas_usd,
+	sum(venta_usd) + sum(coalesce(descuento_usd,0)) - sum(coalesce(costo_producto_usd,0)) as agm
+into curso_tabla
+from ventas v
+left join curso_inventory i on v.tienda = i.tienda and v.sku = i.sku and v.fecha = i.fecha
+group by
+	v.sku,
+	v.tienda,
+	v.fecha,
+	dia,
+	mes,
+	año,
+	año_fiscal,
+	año_fiscal_texto,
+	trimestre_fiscal,
+	nombre,
+	categoria,
+	subcategoria,
+	subsubcategoria,
+	proveedor,
+	pais,
+	provincia,
+	nombre_tienda,
+	venta_usd,
+	impuestos_usd,
+	descuento_usd,
+	creditos_usd,
+	costo_producto_usd,
+	cantidad_productos,
+	ajuste_usd,
+	cantidad_devoluciones
