@@ -25,27 +25,24 @@ order by
 -- Armar una vista a nivel sku donde se pueda identificar por orden de contribucion, ese 20% aproximado de SKU mas importantes. 
 -- (Nota: En este ejercicios estamos construyendo una tabla que muestra la regla de Pareto)
 
--- Tuve que agregar el top 9 ya que no me permitía hacer un order by para una view:
 create view contribucion_ventas_pareto
 as 
 with pareto as (
 select  
 	producto,
-	round(sum(ventas_usd) over(partition by producto) / sum(ventas_usd) over(),3) as contribucion_ventas
+	 round(sum(ventas_usd) / (select sum(ventas_usd) from curso_margen_bruto_usd) * 100, 2) as contribucion_ventas
 from 
 	curso_margen_bruto_usd 
 group by
-	producto,ventas_usd
+	producto
 )
-select 
-	top 9 producto,
-	sum(contribucion_ventas) over(partition by producto) as contribucion_pareto
-from 
-	pareto 
-group by	
-	producto, contribucion_ventas
-order by 
-		contribucion_pareto desc
+, contribucion as (
+select producto, contribucion_ventas, sum(contribucion_ventas) over(order by contribucion_ventas desc) as porcentaje_acumulado, 80 as valor_objetivo,
+case when round(sum(contribucion_ventas) over(order by contribucion_ventas desc) - 80,2) < 0 then null else round(sum(contribucion_ventas) over(order by contribucion_ventas desc) - 80,2) end as dif
+from pareto 
+)
+select concat('El 80% de las ventas, en nuestro caso, se dan en el ',
+cast(round(((select count(1) +1 from contribucion where dif is null)*1.0 / (select count(distinct producto) as productos from curso_margen_bruto_usd)*100),2) as decimal (10,2)), '% de los productos') as respuesta
 
 -- 3- Calcular el crecimiento de ventas por tienda mes a mes, con el valor nominal y el valor % de crecimiento.
 with usd as(
