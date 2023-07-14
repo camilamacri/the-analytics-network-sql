@@ -24,7 +24,7 @@ from curso_market_count
 union all
 select tienda, conteo, fecha
 from curso_super_store_count_september
--- La diferencia hubiese sido en realizar un join de la tabla anterior con esta nueva tabla.
+-- La diferencia hubiese sido en realizar un solo union all en vez de dos.
 
 -- 3- Crear una vista con el resultado del ejercicio de la Parte 1 - Clase 3 - Ejercicio 10, donde calculamos el margen 
 -- bruto en dolares. Agregarle la columna de ventas, descuentos, y creditos en dolares para poder reutilizarla en un futuro.
