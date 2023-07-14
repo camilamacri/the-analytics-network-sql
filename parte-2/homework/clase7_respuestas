@@ -74,15 +74,16 @@ from curso_order_line_sale ols
 	left join curso_monthly_average_fx_rate on datepart(MONTH,ols.fecha) = datepart(month,curso_monthly_average_fx_rate.mes)
 where 
 	subcategoria <> 'TV' 
-	and tienda not in (1, 2, 3, 5)
+	and tienda not in (select codigo_tienda from curso_store_master where pais = 'Argentina')
 )
 select 
+	tienda,
 	producto, 
 	subcategoria, 
 	round(sum(ventas_usd),2) ventas_usd
 from ventas_usd
-group by producto, subcategoria
-order by producto 
+group by tienda, producto, subcategoria
+order by tienda  
 
 -- 5- El gerente de ventas quiere ver el total de unidades vendidas por dia junto con otra columna con la cantidad de unidades
 -- vendidas una semana atras y la diferencia entre ambos. Nota: resolver en dos querys usando en una CTEs y en la otra windows functions.
