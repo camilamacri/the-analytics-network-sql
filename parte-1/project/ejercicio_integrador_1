@@ -252,3 +252,11 @@ where tabla_1.id is null or tabla_2.id is null
 -- Cual es la diferencia entre INNER JOIN y LEFT JOIN. (podes usar la tabla anterior)
 -- INNER JOIN devuelve los registros comunes entre las dos tablas. Con este ejemplo Tabla 1: 1,2,3,4 Tabla 2: 3,4,5,6; traería el 3 y 4 de ambas.
 -- En cambio LEFT JOIN devuelve todos los registros de la primer tabla y los comunes con la segunda tabla. Con este ejemplo Tabla 1: 1,2,3,4 Tabla 2: 3,4,5,6; traería de la Tabla 1: 1,2,3,4 y 3,4 de la Tabla 2.
+
+select *
+from tabla_1
+left join tabla_2 on tabla_1.id = tabla_2.id 
+
+select *
+from tabla_1
+inner join tabla_2 on tabla_1.id = tabla_2.id 
